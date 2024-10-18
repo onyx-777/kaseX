@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum OrderStatus {
+  fulfilled
+  shipped
+  awaiting_shipment
+}
+
+model User {
+  id                        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId                   String            @unique
+  firstName                 String?
+  lastName                  String?
+  email                     String
+  selectedShippingAddressId String?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  Media                     Media[]
+  Case                      Case[]
+  shippingAddresses         ShippingAddress[]
+  // Order                     Order[]
+  Order                     Order[]
+}
+
+model Media {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url       String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.Uuid
+}
+
+model Case {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  imageUrl        String
+  croppedImageUrl String
+  height          Int
+  width           Int
+  color           String
+  material        String
+  finish          String
+  imageOpacity    Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String   @db.Uuid
+
+  // Order Order[]
+  Order Order[]
+}
+
+model ShippingAddress {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  house       String
+  street      String
+  city        String
+  postalCode  String
+  country     String
+  state       String
+  phoneNumber String
+  User        User?   @relation(fields: [userId], references: [id])
+  userId      String? @db.Uuid
+  Order       Order[]
+}
+
+model Order {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  case          Case        @relation(fields: [caseId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  paymentIntent String      @unique
+  userId        String      @db.Uuid
+  amount        Float
+  isPaid        Boolean     @default(false)
+  status        OrderStatus @default(awaiting_shipment)
+
+  shippingAddress ShippingAddress @relation(fields: [shippingAddressId], references: [id])
+
+  caseId            String   @db.Uuid
+  shippingAddressId String   @db.Uuid
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
